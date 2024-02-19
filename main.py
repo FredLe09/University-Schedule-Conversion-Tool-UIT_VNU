@@ -1,23 +1,22 @@
-import utils.__index__ as utils
 import pandas as pd
+from icalendar import Calendar
+import utils.__index__ as utils
 
 
 def main(file: str) -> None:
-    raw_filepath = f"./data/{file}"
-    sheet_name_LT = "TKB LT"
-    sheet_name_TH = "TKB TH"
+    raw_filepath: str = f"./data/{file}"
+    sheet_names: list[str] = ["TKB LT", "TKB TH"]
 
     try:
-        df_1 = utils.import_data(raw_filepath, sheet_name_LT)
-        df_2 = utils.import_data(raw_filepath, sheet_name_TH)
-        df = pd.concat([df_1, df_2])
+        df: pd.DataFrame = pd.concat(
+            [utils.import_data(raw_filepath, sheet_name) for sheet_name in sheet_names]
+        )
     except Exception as e:
-        print(e)
-        return
+        raise ValueError(f"Error: {e}")
 
     class_filepath = "./data/list_classes.txt"
     with open(class_filepath, "r") as f:
-        classes = f.read().splitlines()
+        classes: list[str] = f.read().splitlines()
 
     df = utils.filter_classes(df, classes)
     df = utils.clean_data_frames(df)
@@ -28,7 +27,8 @@ def main(file: str) -> None:
         Returns: pd.DataFrame
 
         Convert datetime to date, handle TIẾT, THỨ columns"""
-        res = df.copy()
+        res: pd.DataFrame = df.copy()
+        print(res["TIẾT"].dtype)
         res["TGBD"] = res["TIẾT"].apply(utils.handle_tiet)
         res["TGKT"] = res["TIẾT"].apply(utils.handle_tiet, isStart=False)
         res.drop("TIẾT", axis=1, inplace=True)
@@ -36,13 +36,13 @@ def main(file: str) -> None:
         res["THỨ"] = res.apply(utils.handle_thu, axis=1)
         return res
 
-    df = handle_datetime(df)
+    df: pd.DataFrame = handle_datetime(df)
     df = df[pd.notnull(df["THỨ"])]
 
-    lst = df.apply(utils.handle_data, axis=1).tolist()
+    lst: list[dict] = df.apply(utils.handle_data, axis=1).tolist()
 
-    cal = utils.create_calendar(
-        [utils.create_event(**e) for e in lst],
+    cal: Calendar = utils.create_calendar(
+        lst_event=[utils.create_event(**e) for e in lst],
     )
 
     res_filepath = "./tkb.ics"
